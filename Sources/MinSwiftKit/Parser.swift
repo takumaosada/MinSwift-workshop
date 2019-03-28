@@ -10,21 +10,33 @@ class Parser: SyntaxVisitor {
 
     override func visit(_ token: TokenSyntax) {
         print("Parsing \(token.tokenKind)")
+        tokens.append(token)
     }
 
     @discardableResult
     func read() -> TokenSyntax {
-        fatalError("Not Implemented")
+        let hogehoge = tokens[index]
+        currentToken = hogehoge
+        index += 1
+        return hogehoge
     }
 
     func peek(_ n: Int = 0) -> TokenSyntax {
-        fatalError("Not Implemented")
+        let tokenIndex = tokens[index + n]
+        return tokenIndex
     }
 
     // MARK: Practice 2
 
     private func extractNumberLiteral(from token: TokenSyntax) -> Double? {
-        fatalError("Not Implemented")
+        switch token.tokenKind {
+        case .integerLiteral(let tokenInt):
+            return Double(tokenInt)
+        case .floatingLiteral(let tokenFloat):
+            return Double(tokenFloat)
+        default:
+            return nil
+        }
     }
 
     func parseNumber() -> Node {
@@ -34,15 +46,54 @@ class Parser: SyntaxVisitor {
         read() // eat literal
         return NumberNode(value: value)
     }
+    
+    
 
     func parseIdentifierExpression() -> Node {
-        fatalError("Not Implemented")
+
+        guard case .identifier(let value1) = currentToken.tokenKind else {
+            fatalError()
+        }
+        read()
+        
+        guard case .leftParen = currentToken.tokenKind else {
+            return VariableNode(identifier: value1)
+        }
+        read()
+        
+        var arguments: Array<CallExpressionNode.Argument> = []
+        while true {
+            if case .rightParen = currentToken.tokenKind {
+                read()
+                break
+            } else if case .identifier(let argumentName) = currentToken.tokenKind {
+                read()
+                
+                guard case .colon = currentToken.tokenKind else {
+                    fatalError()
+                }
+                read()
+                
+                let value = parseExpression()
+                let argument = CallExpressionNode.Argument(label: argumentName, value: value!)
+                arguments.append(argument)
+            } else if case .comma = currentToken.tokenKind {
+                read()
+            }
+        }
+        
+         return CallExpressionNode(callee: value1, arguments: arguments)
     }
 
     // MARK: Practice 3
 
     func extractBinaryOperator(from token: TokenSyntax) -> BinaryExpressionNode.Operator? {
-        fatalError("Not Implemented")
+        switch token.tokenKind {
+        case .spacedBinaryOperator(let value):
+            return BinaryExpressionNode.Operator.init(rawValue: value)
+        default:
+            return nil
+        }
     }
 
     private func parseBinaryOperatorRHS(expressionPrecedence: Int, lhs: Node?) -> Node? {
@@ -87,11 +138,96 @@ class Parser: SyntaxVisitor {
     // MARK: Practice 4
 
     func parseFunctionDefinitionArgument() -> FunctionNode.Argument {
-        fatalError("Not Implemented")
+        let firstIdentifier: FunctionNode.Argument
+        switch currentToken.tokenKind {
+        case .identifier(let value):
+            firstIdentifier = FunctionNode.Argument.init(label: value, variableName: value)
+            read()
+        default:
+            fatalError("Not Implemented")
+        }
+        
+        switch currentToken.tokenKind {
+        case .colon:
+            read()
+        default:
+            fatalError("Not Implemented")
+        }
+        
+        switch currentToken.tokenKind {
+        case .identifier:
+            read()
+        default:
+            fatalError("Not Implemented")
+        }
+        
+        return firstIdentifier
     }
 
     func parseFunctionDefinition() -> Node {
-        fatalError("Not Implemented")
+        
+        guard case .funcKeyword = currentToken.tokenKind else {
+            fatalError()
+        }
+        read()
+        
+        guard case .identifier(let functionName) = currentToken.tokenKind else {
+            fatalError()
+        }
+        read()
+        
+        guard case .leftParen = currentToken.tokenKind else {
+            fatalError()
+        }
+        read()
+        
+        
+        var arguments: [FunctionNode.Argument] = []
+        while true {
+            if case .rightParen = currentToken.tokenKind {
+                read()
+                break
+            } else if case .identifier(let value) = currentToken.tokenKind {
+                read()
+                
+                guard case .colon = currentToken.tokenKind else {
+                    fatalError()
+                }
+                read()
+                
+                let argument = FunctionNode.Argument(label: value, variableName: value)
+                arguments.append(argument)
+                
+            } else if case .comma = currentToken.tokenKind {
+                read()
+            }
+        }
+        
+        guard case .arrow = currentToken.tokenKind else {
+            fatalError()
+        }
+        read()
+        
+        guard case .identifier = currentToken.tokenKind else {
+            fatalError()
+        }
+        read()
+        
+        guard case .leftBrace = currentToken.tokenKind else {
+            fatalError()
+        }
+        read()
+        
+        guard let body = parseExpression() else {
+            fatalError()
+        }
+
+        guard case .rightBrace = currentToken.tokenKind else {
+            fatalError()
+        }
+        read()
+        
+        return FunctionNode.init(name: functionName, arguments: arguments, returnType: .double, body: body)
     }
 
     // MARK: Practice 7
